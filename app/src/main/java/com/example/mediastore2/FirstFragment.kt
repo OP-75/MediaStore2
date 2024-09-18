@@ -22,6 +22,7 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
+import com.anggrayudi.storage.media.MediaFile
 import com.example.mediastore2.databinding.FragmentFirstBinding
 import com.vmadalin.easypermissions.EasyPermissions
 import java.io.IOException
@@ -114,14 +115,15 @@ class FirstFragment : Fragment() {
                 }
 
 
-
                 // Open input stream from source URI
                 contentResolver.openInputStream(sourceUri)?.use { inputStream ->
                     // Open output stream to destination URI
                     contentResolver.openOutputStream(destFile.uri)?.use { outputStream ->
                         inputStream.copyTo(outputStream)
+                        //the above function is blocking & uses small buffer size so it can be slow
+                        //it also doesnt copy meta data
+                        //you can try asking claude what its limitations are & how to fix them
 
-                        //doesnt copy meta data or filename for now
                     }
                 }
 

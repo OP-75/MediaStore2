@@ -44,6 +44,9 @@ dependencies {
     implementation("pub.devrel:easypermissions:3.0.0")
     implementation ("com.vmadalin:easypermissions-ktx:1.0.0")
 
+    //Simple storage
+    implementation("com.anggrayudi:storage:2.0.0")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
