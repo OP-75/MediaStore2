@@ -47,6 +47,9 @@ dependencies {
     //Simple storage
     implementation("com.anggrayudi:storage:2.0.0")
 
+    //Material Dialog
+    implementation("com.afollestad.material-dialogs:files:3.3.0")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

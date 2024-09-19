@@ -26,6 +26,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
+import com.afollestad.materialdialogs.MaterialDialog
+import com.afollestad.materialdialogs.list.listItems
 import com.anggrayudi.storage.SimpleStorageHelper
 import com.anggrayudi.storage.callback.MultipleFilesConflictCallback
 import com.anggrayudi.storage.callback.SingleFileConflictCallback
@@ -115,7 +117,13 @@ class SecondFragment : Fragment() {
                 }
                 Log.i(TAG, "getContent() clipdata: ${selectedUris.toString()}")
                 pickFolder.launch(null)
-            } else {
+            }
+            else if (data.data?.data != null){
+                selectedUris.add(data.data?.data!!)
+                Log.i(TAG, "getContent() data: ${selectedUris.toString()}")
+                pickFolder.launch(null)
+            }
+            else {
                 Log.i(TAG, "No media selected")
             }
         }
@@ -215,11 +223,27 @@ class SecondFragment : Fragment() {
 
 
 
-    private fun createFileCallback(): SingleFileConflictCallback<DocumentFile> = object : SingleFileConflictCallback<DocumentFile>(uiScope) {
+    private fun createFileCallback() = object : SingleFileConflictCallback<DocumentFile>(uiScope) {
         override fun onFileConflict(destinationFile: DocumentFile, action: FileConflictAction) {
-            Toast.makeText(requireContext(),"onFileConflict",Toast.LENGTH_SHORT).show()
+            handleFileConflict(action)
         }
     }
+
+    private fun handleFileConflict(action: SingleFileConflictCallback.FileConflictAction) {
+        MaterialDialog(requireContext())
+            .cancelable(false)
+            .title(text = "Conflict Found")
+            .message(text = "What do you want to do with the file already exists in destination?")
+            .listItems(items = listOf("Replace", "Create New", "Skip Duplicate")) { _, index, _ ->
+                val resolution = SingleFileConflictCallback.ConflictResolution.entries[index]
+                action.confirmResolution(resolution)
+                if (resolution == SingleFileConflictCallback.ConflictResolution.SKIP) {
+                    Toast.makeText(requireContext(), "Skipped duplicate file", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .show()
+    }
+
 
 
 
