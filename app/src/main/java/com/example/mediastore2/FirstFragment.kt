@@ -22,6 +22,8 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
+import com.anggrayudi.storage.SimpleStorageHelper
 import com.anggrayudi.storage.media.MediaFile
 import com.example.mediastore2.databinding.FragmentFirstBinding
 import com.vmadalin.easypermissions.EasyPermissions
@@ -33,9 +35,10 @@ class FirstFragment : Fragment() {
     private var _binding: FragmentFirstBinding? = null
     private var selectedUris = mutableListOf<Uri>()
 
-
+    private  lateinit var targetUri:Uri
     private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { destUri ->
         if (destUri != null) {
+            targetUri = destUri
             moveImageToFolder(selectedUris, destUri)
         } else {
             Log.i(TAG, "No folder selected")
@@ -91,10 +94,13 @@ class FirstFragment : Fragment() {
 
 
     private fun moveImageToFolder(sourceUris: MutableList<Uri>, destinationFolderUri: Uri) {
-        if (sourceUris == null) {
-            Log.e(TAG, "Source URI is null")
+        if (sourceUris == null || sourceUris.isEmpty()) {
+            Log.e(TAG, "Source URIs are null or empty")
             return
         }
+
+
+        //! Use coroutines!!!!
 
         for (sourceUri in sourceUris){
             try {
@@ -153,6 +159,7 @@ class FirstFragment : Fragment() {
 
 
     }
+
 
 
 
@@ -364,15 +371,16 @@ class FirstFragment : Fragment() {
                     0,
                     READ_MEDIA_IMAGES, READ_MEDIA_VIDEO
                 )
-
-
-            }else{
+            }
+            else{
                 //getAllImage()
                 imageChooser()
-                //findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
-
             }
 
+        }
+
+        binding.btnNext.setOnClickListener {
+            findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
     }
 
