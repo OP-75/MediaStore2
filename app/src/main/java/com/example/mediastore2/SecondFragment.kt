@@ -85,9 +85,10 @@ class SecondFragment : Fragment() {
         val i = Intent()
         i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
         i.setType("image/* video/*")
-        i.setAction(Intent.ACTION_PICK) //for opening gallery
+//        i.setAction(Intent.ACTION_PICK) //for opening gallery
 //        i.setAction(Intent.ACTION_GET_CONTENT) //open the basic pop up selector, clicking on 3 dots/options->"Browse" opens the inbuilt file selector with option for selecting from Diffrent gallery apps
-
+        i.setAction(Intent.ACTION_OPEN_DOCUMENT) //return URI in format of content://com.android.providers.media.documents/document/image%3A1000061726
+                                                //only this documents URI works with DocumentFile.moveTo()
 
         // pass the constant to compare it
         // with the returned requestCode
@@ -125,6 +126,10 @@ class SecondFragment : Fragment() {
 
 
     private fun moveImageToFolder(sourceUris: MutableList<Uri>, destinationFolderUri: Uri) {
+//        sourceUris should documents URI (documents provider URI???)
+//        Try using i.setAction(Intent.ACTION_OPEN_DOCUMENT) for selecting media
+//        An example documents URI is:content://com.android.providers.media.documents/document/image%3A1000061726
+
         if (sourceUris == null || sourceUris.isEmpty()) {
             Log.e(TAG, "Source URIs are null or empty")
             return
@@ -132,36 +137,82 @@ class SecondFragment : Fragment() {
 
 
 
+
         for (sourceUri in sourceUris){
 
-            try {
-                val source:DocumentFile = sourceUri.toDocumentFile(requireContext())!!
-                val targetFolder:DocumentFile = destinationFolderUri.toDocumentFile(requireContext())!!
 
-                Log.i(TAG, "moveImageToFolder: ${source.isFile},${source.fullName}")
-                Log.i(TAG, "moveImageToFolder: ${targetFolder.isDirectory},${targetFolder.canWrite()}")
+            ioScope.launch {
 
-                ioScope.launch {
+                try {
+                    val source: DocumentFile =
+                        DocumentFile.fromSingleUri(requireContext(), sourceUri)!!
+                    val targetFolder: DocumentFile =
+                        destinationFolderUri.toDocumentFile(requireContext())!!
 
+//                    if (!DocumentFile.isDocumentUri(requireContext(),sourceUri)){
+//                        throw IllegalArgumentException("sourceUri is not documents URI\nTry using i.setAction(Intent.ACTION_OPEN_DOCUMENT) for selecting media\nAn example documents URI is:content://com.android.providers.media.documents/document/image%3A1000061726")
+//                    }
+
+                    Log.i(
+                        TAG,
+                        "moveImageToFolder: ${source.isFile},${source.fullName},${source.uri}"
+                    )
+                    Log.i(
+                        TAG,
+                        "moveImageToFolder: ${targetFolder.isDirectory},${targetFolder.canWrite()},${targetFolder.uri}"
+                    )
+
+
+                    Log.i(TAG, "Started...")
+                    source.moveFileTo(
+                        requireContext().applicationContext,
+                        targetFolder,
+                        onConflict = createFileCallback()
+                    ).onCompletion {
+                        if (it is CancellationException) {
+                            Log.d(TAG, "File move is aborted")
+                        }
+                        Log.i(TAG, "Ended...")
+                    }.collect { result ->
+                        //not writing .collect or .onCompletion will not move the file below is the reason why
+                        // https://chatgpt.com/share/66ebf06d-9120-8006-b4e9-8079fe9fca9a
+                        when (result) {
+                            is SingleFileResult.Validating -> Log.d(TAG, "Validating...")
+                            is SingleFileResult.Preparing -> Log.d(TAG, "Preparing...")
+                            is SingleFileResult.CountingFiles -> Log.d(TAG, "Counting files...")
+                            is SingleFileResult.DeletingConflictedFile -> Log.d(TAG, "Deleting conflicted file...")
+                            is SingleFileResult.Starting -> Log.d(TAG, "Starting...")
+                            is SingleFileResult.InProgress -> {
+                                Log.d(TAG, "Progress: ${result.progress.toInt()}%")
+                            }
+                            is SingleFileResult.Completed -> {
+                                Log.d(TAG, "Completed")
+                            }
+                            is SingleFileResult.Error -> {
+                                Log.e(TAG, "An error has occurred: ${result.errorCode.name}")
+                            }
+                        }
+                    }
+
+
+                } catch (e: IOException) {
+                    Log.e(TAG, "Error moving file", e)
+                    Toast.makeText(requireContext(), "Error moving image", Toast.LENGTH_SHORT)
+                        .show()
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error moving file", e)
+                    Toast.makeText(requireContext(), "Exception: ", Toast.LENGTH_SHORT).show()
 
                 }
-
-
-            } catch (e: IOException) {
-                Log.e(TAG, "Error moving file", e)
-                Toast.makeText(requireContext(), "Error moving image", Toast.LENGTH_SHORT).show()
-                return
-            }
-            catch (e: Exception){
-                Log.e(TAG, "Error moving file", e)
-                Toast.makeText(requireContext(), "Exception: ", Toast.LENGTH_SHORT).show()
-                return
             }
 
 
         }
 
     }
+
+
 
 
     private fun createFileCallback(): SingleFileConflictCallback<DocumentFile> = object : SingleFileConflictCallback<DocumentFile>(uiScope) {
