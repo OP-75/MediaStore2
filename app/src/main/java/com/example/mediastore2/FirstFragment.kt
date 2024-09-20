@@ -42,7 +42,7 @@ class FirstFragment : Fragment() {
     private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { baseDestinationUri ->
         if (baseDestinationUri != null) {
 
-            //take persistable permission so that permission maintains when device reboots or app closes
+            //take persistable permission so that permission maintains when device reboots or app closes, otherwise we cant write/copy images to path after reboot
             takePersistentPermission(baseDestinationUri)
 
             val destHiddenFolder = DocumentFile.fromTreeUri(requireContext(), baseDestinationUri)
@@ -67,6 +67,7 @@ class FirstFragment : Fragment() {
     }
 
     private fun takePersistentPermission(uri: Uri) {
+        //take persistable permission so that permission maintains when device reboots or app closes, otherwise we cant write/copy images to path after reboot
         val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
                 Intent.FLAG_GRANT_WRITE_URI_PERMISSION
         requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
