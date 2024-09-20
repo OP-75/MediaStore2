@@ -5,12 +5,15 @@ import android.Manifest.permission.READ_MEDIA_VIDEO
 import android.app.Activity.RESULT_OK
 import android.content.ContentResolver
 import android.content.ContentUris
+import android.content.Context.MODE_PRIVATE
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.provider.BaseColumns
 import android.provider.MediaStore
 import android.provider.OpenableColumns
+import android.provider.Settings
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -23,9 +26,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.anggrayudi.storage.SimpleStorageHelper
-import com.anggrayudi.storage.media.MediaFile
+import com.example.mediastore2.GsonSerializer.UriAdapter
 import com.example.mediastore2.databinding.FragmentFirstBinding
+import com.google.gson.Gson
 import com.vmadalin.easypermissions.EasyPermissions
 import java.io.IOException
 
@@ -35,13 +38,83 @@ class FirstFragment : Fragment() {
     private var _binding: FragmentFirstBinding? = null
     private var selectedUris = mutableListOf<Uri>()
 
-    private  lateinit var targetUri:Uri
-    private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { destUri ->
-        if (destUri != null) {
-            targetUri = destUri
-            moveImageToFolder(selectedUris, destUri)
+
+    private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { baseDestinationUri ->
+        if (baseDestinationUri != null) {
+
+            //take persistable permission so that permission maintains when device reboots or app closes
+            takePersistentPermission(baseDestinationUri)
+
+            val destHiddenFolder = DocumentFile.fromTreeUri(requireContext(), baseDestinationUri)
+                ?.createDirectory(".TestHiddenFolder") //creates numbered multiple if already exists
+
+           if (destHiddenFolder!=null){
+
+               val isSavedDestination = saveDestinationUriToSP(destHiddenFolder.uri)
+               if (!isSavedDestination){
+                   Toast.makeText(requireContext(),"Couldn't save destination path SharedPreferences",Toast.LENGTH_SHORT).show()
+               }
+
+               moveImageToFolder(selectedUris, destHiddenFolder.uri)
+           }
+           else{
+               Toast.makeText(requireContext(),"Error: destHiddenFolder = null",Toast.LENGTH_SHORT).show()
+           }
+
         } else {
             Log.i(TAG, "No folder selected")
+        }
+    }
+
+    private fun takePersistentPermission(uri: Uri) {
+        val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+        requireContext().contentResolver.takePersistableUriPermission(uri, takeFlags)
+    }
+
+
+    private fun saveDestinationUriToSP(uri:Uri):Boolean{
+
+        try {
+            val sharedPreferences: SharedPreferences =
+                requireContext().getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE) //SHARED_PREFERENCES_NAME is the file name in which the data is staored, one app can have multiple files with multiple data so make sure this name is same across the app for saving settings!!!
+
+            val myEdit = sharedPreferences.edit()
+
+            //Since Uri is a abstract class Gson() can serialize & deserialze it hence we need to add our own custom UriAdapter which does the serializing & deserailizing
+            val gson= Gson().newBuilder().registerTypeHierarchyAdapter(Uri::class.java, UriAdapter()).create()
+            val uriJson = gson.toJson(uri)
+
+            myEdit.putString(DESTINATION_URI_JSON_SP_KEY,uriJson)
+
+            return myEdit.commit()
+        }
+        catch (e:Exception){
+            Log.e(TAG, "saveDestinationUri: Error on saving destination path", e)
+            return false
+        }
+    }
+
+    private fun getDestinationUriFromSP():Uri? {
+        try {
+            val sharedPreferences: SharedPreferences =
+                requireContext().getSharedPreferences(SHARED_PREFERENCES_NAME,MODE_PRIVATE)
+
+            val uriJson = sharedPreferences.getString(DESTINATION_URI_JSON_SP_KEY, null)
+
+            if(uriJson!=null){
+                //Since Uri is a abstract class Gson() can serialize & deserialze it hence we need to add our own custom UriAdapter which does the serializing & deserailizing
+                 val gson= Gson().newBuilder().registerTypeHierarchyAdapter(Uri::class.java, UriAdapter()).create()
+                 return  gson.fromJson(uriJson,Uri::class.java)
+            }
+            else{
+                return null
+            }
+
+        }
+        catch (e:Exception){
+            Log.e(TAG, "getDestinationUriFromSP: Error getting destination path from SP", e)
+            return null
         }
     }
 
@@ -56,7 +129,6 @@ class FirstFragment : Fragment() {
         i.setType("image/* video/*")
         i.setAction(Intent.ACTION_PICK) //for opening gallery
 //        i.setAction(Intent.ACTION_GET_CONTENT) //open the basic pop up selector, clicking on 3 dots/options->"Browse" opens the inbuilt file selector with option for selecting from Diffrent gallery apps
-
 
         // pass the constant to compare it
         // with the returned requestCode
@@ -82,7 +154,16 @@ class FirstFragment : Fragment() {
                     selectedUris.add(clipData.getItemAt(index).uri)
                 }
                 Log.i(TAG, "getContent() clipdata: ${selectedUris.toString()}")
-                pickFolder.launch(null)
+
+                val destinationFolderUri = getDestinationUriFromSP()
+                if (destinationFolderUri!=null){
+                    moveImageToFolder(selectedUris,destinationFolderUri)
+                }
+                else{
+                    pickFolder.launch(null) //this will call the move folder function inside its registerForActivityResult
+                }
+
+
             } else {
                 Log.i(TAG, "No media selected")
             }
@@ -93,15 +174,19 @@ class FirstFragment : Fragment() {
 
 
 
-    private fun moveImageToFolder(sourceUris: MutableList<Uri>, destinationFolderUri: Uri) {
+    private fun moveImageToFolder(sourceUris: MutableList<Uri>, destinationHiddenFolderUri: Uri) {
         if (sourceUris == null || sourceUris.isEmpty()) {
             Log.e(TAG, "Source URIs are null or empty")
             return
         }
 
+        if (!isDestinationValid(destinationHiddenFolderUri)){
+            Toast.makeText(requireContext(), "Destination folder is invalid, please change it in settings", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Destination folder is invalid")
+            return
+        }
 
-        //! Use coroutines!!!!
-
+        //! Use coroutines here!!!!
         for (sourceUri in sourceUris){
             try {
                 val contentResolver = requireContext().contentResolver
@@ -111,9 +196,10 @@ class FirstFragment : Fragment() {
                 Log.i(TAG, "sourceFileName: ${sourceFileName}")
 
 
-                // Create a new file in the destination folder
-                val destFile = DocumentFile.fromTreeUri(requireContext(), destinationFolderUri)
+//                 Create a new file in the destination folder
+                val destFile = DocumentFile.fromTreeUri(requireContext(), destinationHiddenFolderUri)
                     ?.createFile("image/* video/*", sourceFileName)
+
 
                 if (destFile == null) {
                     Log.e(TAG, "Failed to create destination file")
@@ -160,7 +246,10 @@ class FirstFragment : Fragment() {
 
     }
 
-
+    private fun isDestinationValid(destinationHiddenFolderUri: Uri) : Boolean {
+        val dest = DocumentFile.fromTreeUri(requireContext(), destinationHiddenFolderUri)
+        return dest!=null && dest.isDirectory && dest.canWrite() && dest.canRead()
+    }
 
 
     var deleteResultLauncher: ActivityResultLauncher<IntentSenderRequest> =
@@ -315,7 +404,7 @@ class FirstFragment : Fragment() {
             Log.e(TAG, "getExternalUriPathWithId(): ${e.message}", e)
         }
 
-        Log.w(TAG, "getExternalUriPathWithId(): both contentResolver.query failed", )
+        Log.w(TAG, "getExternalUriPathWithId(): both contentResolver.query failed")
         return pickerUri!!
 
 
@@ -359,6 +448,7 @@ class FirstFragment : Fragment() {
 
     }
 
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -371,6 +461,10 @@ class FirstFragment : Fragment() {
                     0,
                     READ_MEDIA_IMAGES, READ_MEDIA_VIDEO
                 )
+
+                if(!MediaStore.canManageMedia(requireContext())){
+                    requestManageMediaPermission() //This permission removes the "Delete" dialog that pops up
+                }
             }
             else{
                 //getAllImage()
@@ -382,6 +476,15 @@ class FirstFragment : Fragment() {
         binding.btnNext.setOnClickListener {
             findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
+
+        binding.btnTest.setOnClickListener {
+
+        }
+    }
+
+    private fun requestManageMediaPermission() {
+        val intent = Intent(Settings.ACTION_REQUEST_MANAGE_MEDIA)
+        startActivity(intent)
     }
 
 
@@ -392,5 +495,7 @@ class FirstFragment : Fragment() {
 
     companion object{
         const val  TAG = "MY_TAG"
+        const val DESTINATION_URI_JSON_SP_KEY = "destination_path_sp_key"
+        const val SHARED_PREFERENCES_NAME = "com.example.mediastore2"
     }
 }

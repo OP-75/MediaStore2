@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.mediastore2"
-        minSdk = 30
+        minSdk = 31
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -49,6 +49,9 @@ dependencies {
 
     //Material Dialog
     implementation("com.afollestad.material-dialogs:files:3.3.0")
+
+    //For saving objects in Shared preferences
+    implementation("com.google.code.gson:gson:2.11.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
