@@ -14,6 +14,9 @@
         <action
             android:id="@+id/action_FirstFragment_to_SecondFragment"
             app:destination="@id/SecondFragment" />
+        <action
+            android:id="@+id/first_to_gallery_action"
+            app:destination="@id/galleryFragment" />
     </fragment>
     <fragment
         android:id="@+id/SecondFragment"
@@ -25,4 +28,9 @@
             android:id="@+id/action_SecondFragment_to_FirstFragment"
             app:destination="@id/FirstFragment" />
     </fragment>
+    <fragment
+        android:id="@+id/galleryFragment"
+        android:name="com.example.mediastore2.GalleryFragment"
+        android:label="fragment_gallery"
+        tools:layout="@layout/fragment_gallery" />
 </navigation>

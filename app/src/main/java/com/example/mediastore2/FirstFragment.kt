@@ -8,6 +8,8 @@ import android.content.ContentUris
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.content.SharedPreferences
+import android.database.Cursor
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
 import android.provider.BaseColumns
@@ -26,6 +28,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import com.anggrayudi.storage.file.getAbsolutePath
 import com.example.mediastore2.GsonSerializer.UriAdapter
 import com.example.mediastore2.databinding.FragmentFirstBinding
 import com.google.gson.Gson
@@ -435,6 +438,9 @@ class FirstFragment : Fragment() {
     }
 
 
+
+
+
     // This property is only valid between onCreateView and
     // onDestroyView.
     private val binding get() = _binding!!
@@ -468,7 +474,7 @@ class FirstFragment : Fragment() {
                 }
             }
             else{
-                //getAllImage()
+
                 imageChooser()
             }
 
@@ -478,8 +484,15 @@ class FirstFragment : Fragment() {
             findNavController().navigate(R.id.action_FirstFragment_to_SecondFragment)
         }
 
-        binding.btnTest.setOnClickListener {
+        binding.btnOpenGallery.setOnClickListener {
+            findNavController().navigate(R.id.first_to_gallery_action)
+        }
 
+        binding.btnTest.setOnClickListener {
+//            getAllImage()
+//            scanFolder()
+//            getFiles(".TestHiddenFolder/")
+              Log.i(TAG, "Done")
         }
     }
 
