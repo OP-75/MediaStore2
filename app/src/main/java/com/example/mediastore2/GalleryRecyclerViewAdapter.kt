@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.TextView
 import androidx.documentfile.provider.DocumentFile
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -38,9 +39,23 @@ class GalleryRecyclerViewAdapter(private val mList: Array<DocumentFile>) : Recyc
             .into(holder.imageView); //imageview to set thumbnail to
 
         if(isVideoFile(mList[position].uri.toString())){
-            holder.itemView.findViewById<ImageView>(R.id.ivVideoIcon).visibility = View.VISIBLE
+            holder.ivVideoIcon.visibility = View.VISIBLE
+        }
+        else{
+            holder.ivVideoIcon.visibility = View.INVISIBLE
         }
 
+        holder.tvSize.text = getImageSize(mList[position].length())
+
+
+    }
+
+    private fun getImageSize(sizeInBytes: Long): String {
+        return when {
+            sizeInBytes <= 102400 -> String.format("%.1f KB", sizeInBytes / 1024.0)
+            sizeInBytes <= 1047527424 -> String.format("%.1f MB", sizeInBytes / (1024.0*1024.0))
+            else -> String.format("%.1f GB", sizeInBytes / (1024.0*1024.0*1024.0))
+        }
 
     }
 
@@ -59,6 +74,8 @@ class GalleryRecyclerViewAdapter(private val mList: Array<DocumentFile>) : Recyc
     // Holds the views for adding it to image and text
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val imageView: ImageView = itemView.findViewById(R.id.imageView)
+        val ivVideoIcon: ImageView = itemView.findViewById(R.id.ivVideoIcon)
+        val tvSize: TextView = itemView.findViewById(R.id.tvSize)
 
     }
 }
