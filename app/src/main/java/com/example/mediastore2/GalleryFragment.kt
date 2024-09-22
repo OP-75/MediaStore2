@@ -22,6 +22,7 @@ import com.example.mediastore2.FirstFragment.Companion.SHARED_PREFERENCES_NAME
 import com.example.mediastore2.FirstFragment.Companion.TAG
 import com.example.mediastore2.GsonSerializer.UriAdapter
 import com.example.mediastore2.databinding.FragmentGalleryBinding
+import com.example.mediastore2.serializer.UriSerializer
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -44,11 +45,7 @@ class GalleryFragment : Fragment() {
             val uriJson = sharedPreferences.getString(DESTINATION_URI_JSON_SP_KEY, null)
 
             if (uriJson != null) {
-                //Since Uri is a abstract class Gson() can serialize & deserialze it hence we need to add our own custom UriAdapter which does the serializing & deserailizing
-                val gson =
-                    Gson().newBuilder().registerTypeHierarchyAdapter(Uri::class.java, UriAdapter())
-                        .create()
-                return gson.fromJson(uriJson, Uri::class.java)
+                return UriSerializer.deserialize(uriJson)
             } else {
                 return null
             }
@@ -59,8 +56,7 @@ class GalleryFragment : Fragment() {
         }
     }
 
-
-    fun scanFolder(): Array<DocumentFile>? {
+    private fun scanFolder(): Array<DocumentFile>? {
 
         val files =
             DocumentFile.fromTreeUri(requireContext(), getDestinationUriFromSP()!!)?.listFiles()
@@ -68,6 +64,7 @@ class GalleryFragment : Fragment() {
         files?.forEach {
 
             Log.i(TAG, "File: ${it.getAbsolutePath(requireContext())}")
+            Log.i(TAG, "File: ${it.uri.toString()}")
 
         }
 
@@ -75,7 +72,7 @@ class GalleryFragment : Fragment() {
 
     }
 
-    fun getFiles(directory_name: String) {
+    private fun getFiles(directory_name: String) {
         var selection: String
         selection = MediaStore.Files.FileColumns.RELATIVE_PATH + " =? "
         var selectionArgs = arrayOf(directory_name)
@@ -137,13 +134,12 @@ class GalleryFragment : Fragment() {
 
         binding.btnTest.setOnClickListener {
 
-
         }
     }
 }
 
 
-class GridSpacingItemDecoration(
+private class GridSpacingItemDecoration(
     private val spanCount: Int,
     private val spacing: Int,
     private val includeEdge: Boolean

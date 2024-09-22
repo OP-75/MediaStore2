@@ -1,59 +1,122 @@
 package com.example.mediastore2
 
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
+import android.view.ScaleGestureDetector
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.OptIn
+import androidx.documentfile.provider.DocumentFile
+import androidx.media3.common.MediaItem
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import com.anggrayudi.storage.file.getAbsolutePath
+import com.example.mediastore2.databinding.FragmentGalleryBinding
+import com.example.mediastore2.databinding.FragmentPlayerBinding
+import com.example.mediastore2.serializer.UriSerializer
 
-// TODO: Rename parameter arguments, choose names that match
-// the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-private const val ARG_PARAM1 = "param1"
-private const val ARG_PARAM2 = "param2"
-
-/**
- * A simple [Fragment] subclass.
- * Use the [PlayerFragment.newInstance] factory method to
- * create an instance of this fragment.
- */
 class PlayerFragment : Fragment() {
-    // TODO: Rename and change types of parameters
-    private var param1: String? = null
-    private var param2: String? = null
+
+    private var _binding: FragmentPlayerBinding? = null
+    private val binding get() = _binding!!
+    private lateinit var player:ExoPlayer
+    private lateinit var scaleGestureDetector:ScaleGestureDetector
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        arguments?.let {
-            param1 = it.getString(ARG_PARAM1)
-            param2 = it.getString(ARG_PARAM2)
-        }
     }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_player, container, false)
+        _binding = FragmentPlayerBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
-    companion object {
-        /**
-         * Use this factory method to create a new instance of
-         * this fragment using the provided parameters.
-         *
-         * @param param1 Parameter 1.
-         * @param param2 Parameter 2.
-         * @return A new instance of fragment PlayerFragment.
-         */
-        // TODO: Rename and change types and number of parameters
-        @JvmStatic
-        fun newInstance(param1: String, param2: String) =
-            PlayerFragment().apply {
-                arguments = Bundle().apply {
-                    putString(ARG_PARAM1, param1)
-                    putString(ARG_PARAM2, param2)
-                }
-            }
+
+    @OptIn(UnstableApi::class)
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+
+        super.onViewCreated(view, savedInstanceState)
+
+        player = ExoPlayer.Builder(requireContext()).build()
+
+        val videoUriString:String? = requireArguments().getString(VIDEO_URI)
+        val videoUri = UriSerializer.deserialize(videoUriString!!)
+
+
+        val file = DocumentFile.fromSingleUri(requireContext(),videoUri)
+
+        // Bind the player to the view.
+        binding.playerView.player = player
+        scaleGestureDetector = ScaleGestureDetector(requireContext(), CustomOnScaleGestureListener(binding.playerView))
+
+        binding.playerView.setOnTouchListener { view, motionEvent ->
+            binding.root.performClick()
+            binding.playerView.onTouchEvent(motionEvent)
+            scaleGestureDetector?.onTouchEvent(motionEvent)
+            true
+        }
+
+        val mediaItem:MediaItem = MediaItem.fromUri(videoUri)
+        player.setMediaItem(mediaItem)
+        player.prepare()
+        player.play()
+
+        
+
+    }
+
+
+
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        player.release()
+    }
+
+    companion object{
+        const val VIDEO_URI = "video_uri"
+        const val TAG = "MY_TAG"
+    }
+
+}
+
+private class CustomOnScaleGestureListener(
+    private val player: PlayerView
+) : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+    private var scaleFactor = 0f
+
+    @OptIn(UnstableApi::class)
+    override fun onScale(
+        detector: ScaleGestureDetector
+    ): Boolean {
+        scaleFactor = detector.scaleFactor
+        return true
+    }
+
+    @OptIn(UnstableApi::class)
+    override fun onScaleBegin(
+        detector: ScaleGestureDetector
+    ) : Boolean{
+
+        return true
+    }
+
+    @OptIn(UnstableApi::class)
+    override fun onScaleEnd(detector: ScaleGestureDetector) {
+        if (scaleFactor > 1) {
+            player.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        } else {
+            player.resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+        }
     }
 }

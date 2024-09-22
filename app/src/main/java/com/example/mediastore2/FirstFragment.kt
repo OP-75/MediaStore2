@@ -31,6 +31,7 @@ import androidx.navigation.fragment.findNavController
 import com.anggrayudi.storage.file.getAbsolutePath
 import com.example.mediastore2.GsonSerializer.UriAdapter
 import com.example.mediastore2.databinding.FragmentFirstBinding
+import com.example.mediastore2.serializer.UriSerializer
 import com.google.gson.Gson
 import com.vmadalin.easypermissions.EasyPermissions
 import java.io.IOException
@@ -85,9 +86,8 @@ class FirstFragment : Fragment() {
 
             val myEdit = sharedPreferences.edit()
 
-            //Since Uri is a abstract class Gson() can serialize & deserialze it hence we need to add our own custom UriAdapter which does the serializing & deserailizing
-            val gson= Gson().newBuilder().registerTypeHierarchyAdapter(Uri::class.java, UriAdapter()).create()
-            val uriJson = gson.toJson(uri)
+
+            val uriJson = UriSerializer.serialize(uri)
 
             myEdit.putString(DESTINATION_URI_JSON_SP_KEY,uriJson)
 
@@ -107,9 +107,7 @@ class FirstFragment : Fragment() {
             val uriJson = sharedPreferences.getString(DESTINATION_URI_JSON_SP_KEY, null)
 
             if(uriJson!=null){
-                //Since Uri is a abstract class Gson() can serialize & deserialze it hence we need to add our own custom UriAdapter which does the serializing & deserailizing
-                 val gson= Gson().newBuilder().registerTypeHierarchyAdapter(Uri::class.java, UriAdapter()).create()
-                 return  gson.fromJson(uriJson,Uri::class.java)
+                return  UriSerializer.deserialize(uriJson)
             }
             else{
                 return null

@@ -1,14 +1,20 @@
 package com.example.mediastore2
 
 import android.content.Context
+import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.documentfile.provider.DocumentFile
+import androidx.navigation.Navigation
+import androidx.navigation.fragment.NavHostFragment.Companion.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.example.mediastore2.PlayerFragment.Companion.VIDEO_URI
+import com.example.mediastore2.serializer.UriSerializer
+import com.google.gson.Gson
 import java.net.URLConnection
 
 
@@ -40,6 +46,13 @@ class GalleryRecyclerViewAdapter(private val mList: Array<DocumentFile>) : Recyc
 
         if(isVideoFile(mList[position].uri.toString())){
             holder.ivVideoIcon.visibility = View.VISIBLE
+            holder.itemView.setOnClickListener {
+                val stringUri:String = UriSerializer.serialize(mList[position].uri)
+                val bundle = Bundle()
+                bundle.putString(VIDEO_URI,stringUri)
+                val navController = Navigation.findNavController(holder.itemView)
+                navController.navigate(R.id.action_galleryFragment_to_playerFragment,bundle)
+            }
         }
         else{
             holder.ivVideoIcon.visibility = View.INVISIBLE
@@ -49,6 +62,15 @@ class GalleryRecyclerViewAdapter(private val mList: Array<DocumentFile>) : Recyc
 
 
     }
+
+    // Holds the views for adding it to image and text
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val imageView: ImageView = itemView.findViewById(R.id.imageView)
+        val ivVideoIcon: ImageView = itemView.findViewById(R.id.ivVideoIcon)
+        val tvSize: TextView = itemView.findViewById(R.id.tvSize)
+
+    }
+
 
     private fun getImageSize(sizeInBytes: Long): String {
         return when {
@@ -69,13 +91,4 @@ class GalleryRecyclerViewAdapter(private val mList: Array<DocumentFile>) : Recyc
         return mimeType != null && mimeType.startsWith("video")
     }
 
-
-
-    // Holds the views for adding it to image and text
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        val imageView: ImageView = itemView.findViewById(R.id.imageView)
-        val ivVideoIcon: ImageView = itemView.findViewById(R.id.ivVideoIcon)
-        val tvSize: TextView = itemView.findViewById(R.id.tvSize)
-
-    }
 }
