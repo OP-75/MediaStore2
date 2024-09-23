@@ -1,6 +1,6 @@
-package com.example.mediastore2
+package com.example.mediastore2.gallery
 
-import android.content.Context.MODE_PRIVATE
+import android.content.Context
 import android.content.SharedPreferences
 import android.database.Cursor
 import android.graphics.Rect
@@ -17,18 +17,13 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.ItemDecoration
 import com.anggrayudi.storage.file.getAbsolutePath
-import com.example.mediastore2.FirstFragment.Companion.DESTINATION_URI_JSON_SP_KEY
-import com.example.mediastore2.FirstFragment.Companion.SHARED_PREFERENCES_NAME
-import com.example.mediastore2.FirstFragment.Companion.TAG
-import com.example.mediastore2.GsonSerializer.UriAdapter
+import com.example.mediastore2.media.importer.FirstFragment
 import com.example.mediastore2.databinding.FragmentGalleryBinding
 import com.example.mediastore2.serializer.UriSerializer
-import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
 
 class GalleryFragment : Fragment() {
 
@@ -40,9 +35,12 @@ class GalleryFragment : Fragment() {
     private fun getDestinationUriFromSP(): Uri? {
         try {
             val sharedPreferences: SharedPreferences =
-                requireContext().getSharedPreferences(SHARED_PREFERENCES_NAME, MODE_PRIVATE)
+                requireContext().getSharedPreferences(
+                    FirstFragment.SHARED_PREFERENCES_NAME,
+                    Context.MODE_PRIVATE
+                )
 
-            val uriJson = sharedPreferences.getString(DESTINATION_URI_JSON_SP_KEY, null)
+            val uriJson = sharedPreferences.getString(FirstFragment.DESTINATION_URI_JSON_SP_KEY, null)
 
             if (uriJson != null) {
                 return UriSerializer.deserialize(uriJson)
@@ -51,7 +49,11 @@ class GalleryFragment : Fragment() {
             }
 
         } catch (e: Exception) {
-            Log.e(TAG, "getDestinationUriFromSP: Error getting destination path from SP", e)
+            Log.e(
+                FirstFragment.TAG,
+                "getDestinationUriFromSP: Error getting destination path from SP",
+                e
+            )
             return null
         }
     }
@@ -63,8 +65,8 @@ class GalleryFragment : Fragment() {
 
         files?.forEach {
 
-            Log.i(TAG, "File: ${it.getAbsolutePath(requireContext())}")
-            Log.i(TAG, "File: ${it.uri.toString()}")
+            Log.i(FirstFragment.TAG, "File: ${it.getAbsolutePath(requireContext())}")
+            Log.i(FirstFragment.TAG, "File: ${it.uri.toString()}")
 
         }
 
@@ -88,7 +90,7 @@ class GalleryFragment : Fragment() {
         if (cursor != null && cursor.moveToFirst()) {
 
             do {
-                Log.i(TAG, "getFiles: ${cursor}")
+                Log.i(FirstFragment.TAG, "getFiles: ${cursor}")
 
             } while (cursor.moveToNext())
         }
@@ -124,7 +126,7 @@ class GalleryFragment : Fragment() {
             val files = scanFolder()
             val adapter = GalleryRecyclerViewAdapter(files!!)
 
-            withContext(Dispatchers.Main){
+            withContext(Dispatchers.Main) {
                 recyclerView.adapter = adapter
                 binding.btnTest.visibility = View.INVISIBLE
             }
@@ -137,7 +139,6 @@ class GalleryFragment : Fragment() {
         }
     }
 }
-
 
 private class GridSpacingItemDecoration(
     private val spanCount: Int,

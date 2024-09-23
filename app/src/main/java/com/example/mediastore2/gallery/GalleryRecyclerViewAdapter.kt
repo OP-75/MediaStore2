@@ -1,4 +1,4 @@
-package com.example.mediastore2
+package com.example.mediastore2.gallery
 
 import android.content.Context
 import android.os.Bundle
@@ -9,16 +9,13 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.documentfile.provider.DocumentFile
 import androidx.navigation.Navigation
-import androidx.navigation.fragment.NavHostFragment.Companion.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.mediastore2.PlayerFragment.Companion.VIDEO_URI
+import com.example.mediastore2.R
+import com.example.mediastore2.gallery.ImageViewerFragment.Companion.IMAGE_URI
+import com.example.mediastore2.gallery.PlayerFragment.Companion.VIDEO_URI
 import com.example.mediastore2.serializer.UriSerializer
-import com.google.gson.Gson
 import java.net.URLConnection
-
-
-
 
 class GalleryRecyclerViewAdapter(private val mList: Array<DocumentFile>) : RecyclerView.Adapter<GalleryRecyclerViewAdapter.ViewHolder>() {
 
@@ -56,6 +53,13 @@ class GalleryRecyclerViewAdapter(private val mList: Array<DocumentFile>) : Recyc
         }
         else{
             holder.ivVideoIcon.visibility = View.INVISIBLE
+            holder.itemView.setOnClickListener {
+                val stringUri:String = UriSerializer.serialize(mList[position].uri)
+                val bundle = Bundle()
+                bundle.putString(IMAGE_URI,stringUri)
+                val navController = Navigation.findNavController(holder.itemView)
+                navController.navigate(R.id.action_galleryFragment_to_imageViewerFragment,bundle)
+            }
         }
 
         holder.tvSize.text = getImageSize(mList[position].length())

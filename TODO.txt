@@ -8,10 +8,17 @@ Use MediaStore API in the first fragment, no need to use simple storage API
 
 Make a hidden folder with ".folder_name" format
 
-Add image compression in app
+Add file compression in app
 
 Add duplicate media detection in app
 
 Add Album feature in app
 
 Make settings page, add there functionality to change where images are stored (destination path)
+
+allow swiping left & right (create another frag for this)
+
+make video player fullscreen
+
+zoom in video
+

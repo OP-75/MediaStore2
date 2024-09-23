@@ -1,4 +1,4 @@
-package com.example.mediastore2
+package com.example.mediastore2.media.importer
 
 import android.Manifest.permission.READ_MEDIA_IMAGES
 import android.Manifest.permission.READ_MEDIA_VIDEO
@@ -8,8 +8,6 @@ import android.content.ContentUris
 import android.content.Context.MODE_PRIVATE
 import android.content.Intent
 import android.content.SharedPreferences
-import android.database.Cursor
-import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
 import android.provider.BaseColumns
@@ -28,19 +26,44 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
-import com.anggrayudi.storage.file.getAbsolutePath
-import com.example.mediastore2.GsonSerializer.UriAdapter
+import com.anggrayudi.storage.file.child
+import com.anggrayudi.storage.file.children
+import com.anggrayudi.storage.file.makeFolder
+import com.example.mediastore2.R
 import com.example.mediastore2.databinding.FragmentFirstBinding
 import com.example.mediastore2.serializer.UriSerializer
-import com.google.gson.Gson
 import com.vmadalin.easypermissions.EasyPermissions
+import java.io.File
 import java.io.IOException
+import kotlin.io.path.Path
 
 
 class FirstFragment : Fragment() {
 
     private var _binding: FragmentFirstBinding? = null
     private var selectedUris = mutableListOf<Uri>()
+
+    private fun getHiddenFolder(baseDestinationUri:Uri): DocumentFile?{
+        val destFolder = DocumentFile.fromTreeUri(requireContext(), baseDestinationUri)
+
+        var destHiddenFolder:DocumentFile? = null
+
+        if (destFolder?.child(requireContext(), HIDDEN_FOLDER_NAME)?.isDirectory == true){
+            //scan if there is a hidden folder already in directory
+            destHiddenFolder = destFolder?.child(requireContext(), HIDDEN_FOLDER_NAME)
+        }
+        else if (destFolder?.name.equals(HIDDEN_FOLDER_NAME)){
+            // if selected folder = hidden folder
+            destHiddenFolder = destFolder
+        }
+        else{
+            // create new hidden folder
+            destHiddenFolder = DocumentFile.fromTreeUri(requireContext(), baseDestinationUri)
+                ?.createDirectory(HIDDEN_FOLDER_NAME) //creates numbered multiple if already exists
+        }
+
+        return  destHiddenFolder
+    }
 
 
     private val pickFolder = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { baseDestinationUri ->
@@ -49,8 +72,7 @@ class FirstFragment : Fragment() {
             //take persistable permission so that permission maintains when device reboots or app closes, otherwise we cant write/copy images to path after reboot
             takePersistentPermission(baseDestinationUri)
 
-            val destHiddenFolder = DocumentFile.fromTreeUri(requireContext(), baseDestinationUri)
-                ?.createDirectory(".TestHiddenFolder") //creates numbered multiple if already exists
+            val destHiddenFolder = getHiddenFolder(baseDestinationUri)
 
            if (destHiddenFolder!=null){
 
@@ -509,5 +531,6 @@ class FirstFragment : Fragment() {
         const val  TAG = "MY_TAG"
         const val DESTINATION_URI_JSON_SP_KEY = "destination_path_sp_key"
         const val SHARED_PREFERENCES_NAME = "com.example.mediastore2"
+        const val HIDDEN_FOLDER_NAME = ".TestHiddenFolder"
     }
 }
