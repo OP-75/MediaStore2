@@ -22,3 +22,6 @@ make video player fullscreen
 
 zoom in video
 
+Use ViewPager to swipe thru photos
+
+show import photos progress
